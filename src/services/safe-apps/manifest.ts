@@ -1,6 +1,25 @@
 import type { AllowedFeatures, SafeAppDataWithPermissions } from '@/components/safe-apps/types'
 import { isRelativeUrl, trimTrailingSlash } from '@/utils/url'
 import { SafeAppAccessPolicyTypes } from '@safe-global/safe-gateway-typescript-sdk'
+import * as cheerio from 'cheerio'
+
+async function fetchAndParse(url: string) {
+  try {
+    const response = await fetch(url)
+
+    if (!response.ok) {
+      throw new Error(`Response status: ${response.status}`)
+    }
+
+    const html = await response.text()
+    const $ = cheerio.load(html)
+    const manifestPath = $('link[rel=manifest]').attr('href')
+
+    return manifestPath
+  } catch (error) {
+    console.error(error)
+  }
+}
 
 type AppManifestIcon = {
   src: string
@@ -57,7 +76,14 @@ const getAppLogoUrl = (appUrl: string, { icons = [], iconPath = '' }: AppManifes
 
 const fetchAppManifest = async (appUrl: string, timeout = 5000): Promise<unknown> => {
   const normalizedUrl = trimTrailingSlash(appUrl)
-  const manifestUrl = `${normalizedUrl}/manifest.json`
+  let manifestUrl = `${normalizedUrl}/manifest.json`
+
+  const manifestPath = await fetchAndParse(normalizedUrl)
+
+  if (manifestPath) {
+    const url = new URL(appUrl)
+    manifestUrl = `${url.origin}${manifestPath}`
+  }
 
   // A lot of apps are hosted on IPFS and IPFS never times out, so we add our own timeout
   const controller = new AbortController()
