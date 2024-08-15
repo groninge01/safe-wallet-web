@@ -67,11 +67,13 @@ const chooseBestIcon = (icons: AppManifestIcon[]): string => {
 const getAppLogoUrl = (appUrl: string, { icons = [], iconPath = '' }: AppManifest) => {
   const iconUrl = icons.length ? chooseBestIcon(icons) : iconPath
   const includesBaseUrl = iconUrl.startsWith('https://')
+  const baseUrl = new URL(appUrl).origin
+
   if (includesBaseUrl) {
     return iconUrl
   }
 
-  return `${appUrl}${isRelativeUrl(iconUrl) ? '' : '/'}${iconUrl}`
+  return `${baseUrl}${isRelativeUrl(iconUrl) ? '' : '/'}${iconUrl}`
 }
 
 const fetchAppManifest = async (appUrl: string, timeout = 5000): Promise<unknown> => {
